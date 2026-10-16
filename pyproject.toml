@@ -1,0 +1,17 @@
+[project]
+name = "cloudops-agent"
+version = "0.1.0"
+description = "AI agent that diagnoses Google Cloud incidents and cost spikes using MCP servers"
+readme = "README.md"
+authors = [
+    { name = "Siddhesh Sampakal", email = "siddhesh.sampkal@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+cloudops-agent = "cloudops_agent:main"
+
+[build-system]
+requires = ["uv_build>=0.12.22,<0.13.0"]
+build-backend = "uv_build"

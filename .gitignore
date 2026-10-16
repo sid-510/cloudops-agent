@@ -1,0 +1,11 @@
+# Python environment and caches
+.venv/
+__pycache__/
+*.pyc
+
+# macOS junk
+.DS_Store
+
+# Secrets (never commit these)
+.env
+*.json.key
