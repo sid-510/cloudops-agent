@@ -7,7 +7,9 @@ authors = [
     { name = "Siddhesh Sampakal", email = "siddhesh.sampkal@gmail.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "google-cloud-logging>=3.17.0",
+]
 
 [project.scripts]
 cloudops-agent = "cloudops_agent:main"
