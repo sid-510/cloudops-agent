@@ -1,8 +1,10 @@
 """Read recent ERROR log entries from Cloud Logging"""
 
+import os
+
 from google.cloud import logging as cloud_logging
 
-PROJECT_ID = "cloudops-agent-sid510"
+PROJECT_ID = os.environ["GOOGLE_CLOUD_PROJECT"]
 
 
 def main() -> None:
