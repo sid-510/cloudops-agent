@@ -6,9 +6,12 @@ quickly and without credentials.
 
 from datetime import datetime, timedelta
 from typing import Any
+from collections import Counter
 
 MAX_MINUTES = 10080 # 7 days
 MAX_RESULTS = 100
+MAX_TOP_N = 50      # most distinct messages top_errors will return
+MAX_SCAN = 1000     # most raw entries top_errors will fetch and count
 
 def clamp(value: int, low: int, high: int) -> int:
     """Returen value limited to the range [low, high]."""
@@ -48,3 +51,30 @@ def build_text_search_filter(text: str, minutes: int, now: datetime) -> str:
     since = now - timedelta(minutes=minutes)
     safe_text = clean_search_text(text)
     return f'"{safe_text}" AND timestamp>="{since.isoformat()}"'
+
+def summarize_errors(entries: list[dict], top_n: int) -> list[dict]:
+    """Group entries by message and return the most common ones.
+
+    `entries` must be newest first (as returned by Cloud Logging with
+    DESCENDING order), so the first entry seen for each message is the latest.
+    """
+    counts = Counter()
+    latest = {}
+
+    for entry in entries:
+        message = str(entry["message"])
+        counts[message] += 1
+        if message not in latest:
+            latest[message] = entry
+
+    summary = []
+    for message, count in counts.most_common(top_n):
+        summary.append(
+            {
+                "message": message,
+                "count": count,
+                "latest_timestamp": latest[message]["timestamp"],
+                "latest_insert_id": latest[message]["insert_id"],
+            }
+        )
+    return summary

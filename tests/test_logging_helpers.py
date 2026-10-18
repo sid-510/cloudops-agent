@@ -9,6 +9,7 @@ from cloudops_agent.mcp_servers.logging_helpers import (
     clamp,
     clean_search_text,
     entry_to_dict,
+    summarize_errors,
 )
 
 
@@ -103,3 +104,54 @@ def test_build_text_search_filter_uses_text_and_time_window():
     result = build_text_search_filter("timeout", minutes=60, now=now)
 
     assert result == '"timeout" AND timestamp>="2026-01-01T11:00:00+00:00"'
+
+# ---------- summarize_errors ----------
+
+def make_entry(message, insert_id, timestamp="2026-01-01T12:00:00+00:00"):
+    """Build a tidy entry dict for tests (like entry_to_dict's output)."""
+    return {
+        "timestamp": timestamp,
+        "severity": "ERROR",
+        "log_name": "projects/demo/logs/app",
+        "message": message,
+        "insert_id": insert_id,
+        "resource_type": "cloud_run_revision",
+    }
+
+
+def test_summarize_errors_counts_and_orders_by_frequency():
+    entries = [
+        make_entry("timeout", "a"),
+        make_entry("db error", "b"),
+        make_entry("timeout", "c"),
+        make_entry("timeout", "d"),
+    ]
+
+    result = summarize_errors(entries, top_n=10)
+
+    assert [r["message"] for r in result] == ["timeout", "db error"]
+    assert [r["count"] for r in result] == [3, 1]
+
+
+def test_summarize_errors_keeps_the_latest_entry_as_evidence():
+    entries = [
+        make_entry("timeout", "newest", timestamp="2026-01-01T12:00:00+00:00"),
+        make_entry("timeout", "older", timestamp="2026-01-01T11:00:00+00:00"),
+    ]
+
+    result = summarize_errors(entries, top_n=10)
+
+    assert result[0]["latest_insert_id"] == "newest"
+    assert result[0]["latest_timestamp"] == "2026-01-01T12:00:00+00:00"
+
+
+def test_summarize_errors_respects_top_n():
+    entries = [make_entry("a", "1"), make_entry("b", "2"), make_entry("c", "3")]
+
+    result = summarize_errors(entries, top_n=2)
+
+    assert len(result) == 2
+
+
+def test_summarize_errors_with_no_entries_returns_empty_list():
+    assert summarize_errors([], top_n=5) == []
