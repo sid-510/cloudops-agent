@@ -73,3 +73,6 @@ def test_entry_to_dict_keeps_json_payload_and_handles_missing_fields():
     assert result["message"] == {"error": "timeout", "latency_ms": 5200}
     assert result["timestamp"] is None
     assert result["resource_type"] is None
+
+def test_clamp_exactly_at_the_limit():
+    assert clamp(100, 1, 100) == 100
