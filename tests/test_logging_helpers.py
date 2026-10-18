@@ -5,7 +5,9 @@ from types import SimpleNamespace
 
 from cloudops_agent.mcp_servers.logging_helpers import (
     build_error_filter,
+    build_text_search_filter,
     clamp,
+    clean_search_text,
     entry_to_dict,
 )
 
@@ -74,5 +76,30 @@ def test_entry_to_dict_keeps_json_payload_and_handles_missing_fields():
     assert result["timestamp"] is None
     assert result["resource_type"] is None
 
+# ---------- additional_clamp_test_for_at_limit_case ----------
+
 def test_clamp_exactly_at_the_limit():
     assert clamp(100, 1, 100) == 100
+
+# ---------- clean_search_text ----------
+
+def test_clean_search_text_leaves_normal_text_alone():
+    assert clean_search_text("timeout") == "timeout"
+
+
+def test_clean_search_text_removes_quotes():
+    assert clean_search_text('timeout" OR severity>="DEBUG') == "timeout OR severity>=DEBUG"
+
+
+def test_clean_search_text_trims_spaces():
+    assert clean_search_text("   database   ") == "database"
+
+
+# ---------- build_text_search_filter ----------
+
+def test_build_text_search_filter_uses_text_and_time_window():
+    now = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
+
+    result = build_text_search_filter("timeout", minutes=60, now=now)
+
+    assert result == '"timeout" AND timestamp>="2026-01-01T11:00:00+00:00"'

@@ -34,3 +34,17 @@ def entry_to_dict(entry: Any) -> dict:
         "insert_id": entry.insert_id,
         "resource_type": entry.resource.type if entry.resource else None,
     }
+
+def clean_search_text(text: str) -> str:
+    """Remove characters that could break out of a quoted filter value.
+
+    Also trims spaces from the start and end.
+    """
+    return text.replace('"', "").replace("\\", "").strip()
+
+
+def build_text_search_filter(text: str, minutes: int, now: datetime) -> str:
+    """Build a filter for entries mentioning `text` in the last N minutes."""
+    since = now - timedelta(minutes=minutes)
+    safe_text = clean_search_text(text)
+    return f'"{safe_text}" AND timestamp>="{since.isoformat()}"'
