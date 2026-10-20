@@ -1,5 +1,7 @@
 """demo_shop: a tiny pretend online shop used to create realistic incidents."""
 
+import os
+import random
 import json
 import sys
 import time
@@ -13,6 +15,10 @@ PRODUCTS = [
     {"id": 2, "name": "Notebook", "price_eur": 6.5},
     {"id": 3, "name": "Desk lamp", "price_eur": 29.0},
 ]
+
+# Fault switches, read from environment variables. Both default to "off".
+SLOW_CHECKOUT_MS = int(os.environ.get("SLOW_CHECKOUT_MS", "0"))
+PAYMENT_FAILURE_RATE = float(os.environ.get("PAYMENT_FAILURE_RATE", "0"))
 
 def log(severity: str, message: str, **fields) -> None:
     """Write one structured log line (JSON) to stdout.
@@ -53,6 +59,22 @@ def checkout(product_id: int) -> dict:
     if product is None:
         log("WARNING", "Product not found", order_id=order_id, product_id=product_id)
         raise HTTPException(status_code=404, detail="Product not found")
+
+    # Fault 1: slow payment provider
+    if SLOW_CHECKOUT_MS > 0:
+        time.sleep(SLOW_CHECKOUT_MS / 1000)
+
+    # Fault 2: flaky payment provider
+    if random.random() < PAYMENT_FAILURE_RATE:
+        latency_ms = round((time.perf_counter() - start) * 1000)
+        log(
+            "ERROR",
+            "Payment provider timeout",
+            order_id=order_id,
+            product_id=product_id,
+            latency_ms=latency_ms,
+        )
+        raise HTTPException(status_code=502, detail="Payment failed")
 
     latency_ms = round((time.perf_counter() - start) * 1000)
     log(
