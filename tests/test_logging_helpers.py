@@ -46,7 +46,10 @@ def test_entry_to_dict_with_text_payload():
         log_name="projects/demo/logs/app",
         payload="Database connection timed out",
         insert_id="abc123",
-        resource=SimpleNamespace(type="cloud_run_revision"),
+        resource=SimpleNamespace(
+            type="cloud_run_revision",
+            labels={"service_name": "demo-shop", "revision_name": "demo-shop-00001-abc"},
+        )
     )
 
     result = entry_to_dict(fake_entry)
@@ -58,6 +61,7 @@ def test_entry_to_dict_with_text_payload():
         "message": "Database connection timed out",
         "insert_id": "abc123",
         "resource_type": "cloud_run_revision",
+        "resource_labels": {"service_name": "demo-shop", "revision_name": "demo-shop-00001-abc"},
     }
 
 
@@ -76,6 +80,7 @@ def test_entry_to_dict_keeps_json_payload_and_handles_missing_fields():
     assert result["message"] == {"error": "timeout", "latency_ms": 5200}
     assert result["timestamp"] is None
     assert result["resource_type"] is None
+    assert result["resource_labels"] == {}
 
 # ---------- additional_clamp_test_for_at_limit_case ----------
 

@@ -36,6 +36,7 @@ def entry_to_dict(entry: Any) -> dict:
         "message": payload,
         "insert_id": entry.insert_id,
         "resource_type": entry.resource.type if entry.resource else None,
+        "resource_labels": dict(entry.resource.labels) if entry.resource else {},
     }
 
 def clean_search_text(text: str) -> str:
