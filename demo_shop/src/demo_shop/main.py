@@ -16,9 +16,12 @@ PRODUCTS = [
     {"id": 3, "name": "Desk lamp", "price_eur": 29.0},
 ]
 
-# Fault switches, read from environment variables. Both default to "off".
-SLOW_CHECKOUT_MS = int(os.environ.get("SLOW_CHECKOUT_MS", "0"))
-PAYMENT_FAILURE_RATE = float(os.environ.get("PAYMENT_FAILURE_RATE", "0"))
+# How long checkout waits for the payment provider before giving up.
+PAYMENT_TIMEOUT_MS = int(os.environ.get("PAYMENT_TIMEOUT_MS", "3000"))
+
+def payment_provider_response_ms() -> int:
+    """Simulate how long the payment provider takes to answer (normally 80-400 ms)."""
+    return random.randint(80, 400)
 
 def log(severity: str, message: str, **fields) -> None:
     """Write one structured log line (JSON) to stdout.
@@ -60,21 +63,21 @@ def checkout(product_id: int) -> dict:
         log("WARNING", "Product not found", order_id=order_id, product_id=product_id)
         raise HTTPException(status_code=404, detail="Product not found")
 
-    # Fault 1: slow payment provider
-    if SLOW_CHECKOUT_MS > 0:
-        time.sleep(SLOW_CHECKOUT_MS / 1000)
-
-    # Fault 2: flaky payment provider
-    if random.random() < PAYMENT_FAILURE_RATE:
+    # Call the (simulated) payment provider
+    provider_ms = payment_provider_response_ms()
+    if provider_ms > PAYMENT_TIMEOUT_MS:
+        time.sleep(PAYMENT_TIMEOUT_MS / 1000)
         latency_ms = round((time.perf_counter() - start) * 1000)
         log(
             "ERROR",
-            "Payment provider timeout",
+            "Payment provider request timed out",
             order_id=order_id,
             product_id=product_id,
             latency_ms=latency_ms,
+            timeout_ms=PAYMENT_TIMEOUT_MS,
         )
         raise HTTPException(status_code=502, detail="Payment failed")
+    time.sleep(provider_ms / 1000)
 
     latency_ms = round((time.perf_counter() - start) * 1000)
     log(
