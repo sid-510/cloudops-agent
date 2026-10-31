@@ -10,6 +10,8 @@ from cloudops_agent.mcp_servers.logging_helpers import (
     clean_search_text,
     entry_to_dict,
     summarize_errors,
+    describe_http_request,
+    summarize_http_request,
 )
 
 
@@ -62,6 +64,7 @@ def test_entry_to_dict_with_text_payload():
         "insert_id": "abc123",
         "resource_type": "cloud_run_revision",
         "resource_labels": {"service_name": "demo-shop", "revision_name": "demo-shop-00001-abc"},
+        "http_request": None,
     }
 
 
@@ -160,3 +163,26 @@ def test_summarize_errors_respects_top_n():
 
 def test_summarize_errors_with_no_entries_returns_empty_list():
     assert summarize_errors([], top_n=5) == []
+
+def test_entry_to_dict_describes_request_logs():
+    fake_entry = SimpleNamespace(
+        timestamp=None,
+        severity="ERROR",
+        log_name="projects/demo/logs/run.googleapis.com%2Frequests",
+        payload=None,
+        insert_id="req1",
+        resource=None,
+        http_request={
+            "requestMethod": "POST",
+            "requestUrl": "https://demo-shop.run.app/checkout?product_id=2",
+            "status": 502,
+            "latency": "0.153s",
+            "remoteIp": "203.0.113.7",
+        },
+    )
+
+    result = entry_to_dict(fake_entry)
+
+    assert result["message"] == "POST /checkout -> 502"
+    assert result["http_request"]["status"] == 502
+    assert "remoteIp" not in result["http_request"]

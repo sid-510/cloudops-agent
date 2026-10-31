@@ -7,6 +7,7 @@ quickly and without credentials.
 from datetime import datetime, timedelta
 from typing import Any
 from collections import Counter
+from urllib.parse import urlparse
 
 MAX_MINUTES = 10080 # 7 days
 MAX_RESULTS = 100
@@ -22,11 +23,29 @@ def build_error_filter(minutes: int, now: datetime) -> str:
     since = now - timedelta(minutes=minutes)
     return f'severity>=ERROR AND timestamp>="{since.isoformat()}"'
 
+HTTP_FIELDS = ("requestMethod", "requestUrl", "status", "latency")
+
+
+def summarize_http_request(http_request) -> dict | None:
+    """Keep only the useful HTTP fields (deliberately drops IP address and user agent)."""
+    if not http_request:
+        return None
+    return {key: http_request[key] for key in HTTP_FIELDS if key in http_request}
+
+
+def describe_http_request(http: dict) -> str:
+    """Turn request fields into a short message like 'POST /checkout -> 502'."""
+    path = urlparse(http.get("requestUrl", "")).path or "/"
+    return f"{http.get('requestMethod', '?')} {path} -> {http.get('status', '?')}"
 
 def entry_to_dict(entry: Any) -> dict:
     """Convert a Cloud Logging entry into a plain dict an MCP client can read."""
+    http = summarize_http_request(getattr(entry, "http_request", None))
+
     payload = entry.payload
-    if not isinstance(payload, (str, dict)):
+    if payload is None and http:
+        payload = describe_http_request(http)
+    elif payload is not None and not isinstance(payload, (str, dict)):
         payload = str(payload)
 
     return {
@@ -37,6 +56,7 @@ def entry_to_dict(entry: Any) -> dict:
         "insert_id": entry.insert_id,
         "resource_type": entry.resource.type if entry.resource else None,
         "resource_labels": dict(entry.resource.labels) if entry.resource else {},
+        "http_request": http,
     }
 
 def clean_search_text(text: str) -> str:
