@@ -9,3 +9,5 @@ __pycache__/
 # Secrets (never commit these)
 .env
 *.json.key
+
+incidents/*/logs.json
