@@ -18,6 +18,8 @@ from cloudops_agent.mcp_servers.logging_helpers import (
     clean_search_text,
     entry_to_dict,
     summarize_errors,
+    build_changes_filter,
+    summarize_change,
 )
 
 PROJECT_ID = os.environ["GOOGLE_CLOUD_PROJECT"]
@@ -101,6 +103,34 @@ def top_errors(minutes: int = 60, top_n: int = 10) -> dict:
         "truncated": len(tidy_entries) == MAX_SCAN,
         "top_errors": summarize_errors(tidy_entries, top_n),
     }
+
+@mcp.tool()
+def get_recent_changes(minutes: int = 120, max_results: int = 20) -> list[dict]:
+    """Return recent deployments and configuration changes to Cloud Run services, newest first.
+
+    Use this to check whether an incident started right after a deploy or config change.
+    Each entry shows the service, the revision (if one was created), the container image
+    and the environment variables of the resulting configuration (secret-looking values
+    are masked), with the audit log insert_id as evidence.
+    The env shown is the full configuration, not a diff: compare a revision with the
+    previous one to see what changed. The same image digest in two revisions means the
+    code did not change.
+
+    Args:
+        minutes: How far back to look, in minutes (1 to 10080, i.e. 7 days).
+        max_results: Maximum number of entries to return (1 to 100).
+    """
+    minutes = clamp(minutes, 1, MAX_MINUTES)
+    max_results = clamp(max_results, 1, MAX_RESULTS)
+    log_filter = build_changes_filter(PROJECT_ID, minutes, now=datetime.now(timezone.utc))
+
+    entries = client.list_entries(
+        filter_=log_filter,
+        order_by=cloud_logging.DESCENDING,
+        max_results=max_results,
+        page_size=max_results,
+    )
+    return [summarize_change(entry_to_dict(entry)) for entry in entries]
 
 if __name__ == "__main__":
     mcp.run()

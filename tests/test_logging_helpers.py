@@ -15,6 +15,7 @@ from cloudops_agent.mcp_servers.logging_helpers import (
     find_values,
     is_run_change,
     summarize_change,
+    build_changes_filter,
 )
 
 
@@ -230,3 +231,28 @@ def test_is_run_change_ignores_other_services():
     entry["message"]["serviceName"] = "cloudbuild.googleapis.com"
 
     assert not is_run_change(entry)
+
+def test_summarize_change_reads_system_event_with_revision():
+    entry = audit_entry([])
+    entry["log_name"] = "projects/demo/logs/cloudaudit.googleapis.com%2Fsystem_event"
+    entry["resource_labels"]["revision_name"] = "demo-shop-00005-s2f"
+    entry["message"]["response"] = {
+        "spec": {"containers": [{"env": [{"name": "PAYMENT_TIMEOUT_MS", "value": "150"}]}]}
+    }
+
+    assert is_run_change(entry)
+    result = summarize_change(entry)
+    assert result["revision"] == "demo-shop-00005-s2f"
+    assert result["env"] == {"PAYMENT_TIMEOUT_MS": "150"}
+
+def test_build_changes_filter():
+    now = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
+
+    result = build_changes_filter("demo", minutes=60, now=now)
+
+    assert result == (
+        'logName=("projects/demo/logs/cloudaudit.googleapis.com%2Factivity" OR '
+        '"projects/demo/logs/cloudaudit.googleapis.com%2Fsystem_event") '
+        'AND protoPayload.serviceName="run.googleapis.com" '
+        'AND timestamp>="2026-01-01T11:00:00+00:00"'
+    )

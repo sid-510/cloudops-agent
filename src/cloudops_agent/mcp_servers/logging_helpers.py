@@ -14,7 +14,7 @@ MAX_RESULTS = 100
 MAX_TOP_N = 50      # most distinct messages top_errors will return
 MAX_SCAN = 1000     # most raw entries top_errors will fetch and count
 HTTP_FIELDS = ("requestMethod", "requestUrl", "status", "latency")
-AUDIT_ACTIVITY_LOG = "cloudaudit.googleapis.com%2Factivity"
+AUDIT_LOGS = ("cloudaudit.googleapis.com%2Factivity", "cloudaudit.googleapis.com%2Fsystem_event")
 SENSITIVE_WORDS = ("KEY", "SECRET", "TOKEN", "PASSWORD")
 
 def clamp(value: int, low: int, high: int) -> int:
@@ -123,7 +123,7 @@ def is_run_change(entry: dict) -> bool:
     """True for audit-log entries recording a change to a Cloud Run service."""
     message = entry["message"]
     return (
-        AUDIT_ACTIVITY_LOG in entry["log_name"]
+        any(log in entry["log_name"] for log in AUDIT_LOGS)
         and isinstance(message, dict)
         and message.get("serviceName") == "run.googleapis.com"
     )
@@ -144,6 +144,17 @@ def summarize_change(entry: dict) -> dict:
         "insert_id": entry["insert_id"],
         "method": message.get("methodName"),
         "service": entry["resource_labels"].get("service_name"),
+        "revision": entry["resource_labels"].get("revision_name"),
         "images": sorted({str(i) for i in find_values(message, "image")}),
         "env": env,
     }
+
+def build_changes_filter(project_id: str, minutes: int, now: datetime) -> str:
+    """Filter for Cloud Run audit entries (requests and system events) in the last N minutes."""
+    since = now - timedelta(minutes=minutes)
+    logs = " OR ".join(f'"projects/{project_id}/logs/{log}"' for log in AUDIT_LOGS)
+    return (
+        f"logName=({logs}) "
+        f'AND protoPayload.serviceName="run.googleapis.com" '
+        f'AND timestamp>="{since.isoformat()}"'
+    )
