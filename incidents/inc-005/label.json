@@ -1,0 +1,19 @@
+{
+  "id": "inc-005",
+  "question": "Customers are reporting checkout failures on demo-shop. Find the most likely root cause, with evidence.",
+  "window_start": "2026-11-01T20:00:39Z",
+  "window_end": "2026-11-01T20:03:31Z",
+  "asked_at": "2026-11-01T20:03:31Z",
+  "case_type": "red_herring",
+  "answerable": true,
+  "root_cause_category": "dependency_failure",
+  "good_revision": "demo-shop-00009-w6l",
+  "bad_revision": null,
+  "red_herring_revision": "demo-shop-00010-24q",
+  "root_cause": "The payment provider started returning errors (503). The earlier deploy (GIFT_WRAP_ENABLED) is unrelated: the new revision served healthy checkouts for about two minutes before the errors began.",
+  "key_evidence": [
+    "'Payment provider returned an error' entries with provider_status=503",
+    "Healthy checkouts on the new revision after the deploy and before the errors"
+  ],
+  "notes": "Requests to the shop's hidden /admin/chaos fault switch were removed from the snapshot."
+}

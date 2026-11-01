@@ -1,0 +1,17 @@
+{
+  "id": "inc-002",
+  "question": "Customers are reporting checkout failures on demo-shop. Find the most likely root cause, with evidence.",
+  "window_start": "2026-11-01T18:47:13Z",
+  "window_end": "2026-11-01T18:48:22Z",
+  "asked_at": "2026-11-01T18:48:22Z",
+  "case_type": "single_cause",
+  "answerable": true,
+  "root_cause_category": "bad_config_deploy",
+  "good_revision": "demo-shop-00007-9xx",
+  "bad_revision": "demo-shop-00008-gq9",
+  "root_cause": "The new revision set PAYMENT_TIMEOUT_MS=150, below the payment provider's normal 80-400 ms response time, so most checkouts time out and return 502. Heavy healthy /products traffic pushes the change out of the most recent log lines.",
+  "key_evidence": [
+    "Config change creating the bad revision with PAYMENT_TIMEOUT_MS=150",
+    "'Payment provider request timed out' errors with timeout_ms=150, only on the bad revision"
+  ]
+}

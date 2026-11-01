@@ -1,0 +1,16 @@
+{
+  "id": "inc-009",
+  "question": "Customers are reporting checkout failures on demo-shop. Find the most likely root cause, with evidence.",
+  "window_start": "2026-11-01T20:38:56Z",
+  "window_end": "2026-11-01T20:39:13Z",
+  "asked_at": "2026-11-01T20:39:13Z",
+  "case_type": "false_alarm",
+  "answerable": false,
+  "root_cause_category": "cannot_establish",
+  "good_revision": "demo-shop-00011-q8s",
+  "bad_revision": null,
+  "root_cause": "No failures in the logs: checkouts are succeeding. The right answer is that the logs show no evidence of a problem.",
+  "key_evidence": [
+    "Only successful checkouts in the window"
+  ]
+}

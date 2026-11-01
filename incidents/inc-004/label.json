@@ -1,0 +1,19 @@
+{
+  "id": "inc-004",
+  "question": "Customers are reporting checkout failures on demo-shop. Find the most likely root cause, with evidence.",
+  "window_start": "2026-11-01T19:23:48Z",
+  "window_end": "2026-11-01T19:25:31Z",
+  "asked_at": "2026-11-01T19:25:31Z",
+  "case_type": "single_cause",
+  "answerable": true,
+  "root_cause_category": "dependency_failure",
+  "good_revision": "demo-shop-00009-w6l",
+  "bad_revision": null,
+  "root_cause": "The payment provider became slow (about 3 s per call) with no deploy or config change; checkouts hit the normal 3000 ms timeout and return 502.",
+  "key_evidence": [
+    "'Payment provider request timed out' errors with timeout_ms=3000 and latency ~3000 ms",
+    "No deploy or config change before the errors began",
+    "Same revision served healthy checkouts just before"
+  ],
+  "notes": "Requests to the shop's hidden /admin/chaos fault switch were removed from the snapshot."
+}
