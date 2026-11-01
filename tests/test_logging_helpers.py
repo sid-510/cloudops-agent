@@ -12,6 +12,9 @@ from cloudops_agent.mcp_servers.logging_helpers import (
     summarize_errors,
     describe_http_request,
     summarize_http_request,
+    find_values,
+    is_run_change,
+    summarize_change,
 )
 
 
@@ -186,3 +189,44 @@ def test_entry_to_dict_describes_request_logs():
     assert result["message"] == "POST /checkout -> 502"
     assert result["http_request"]["status"] == 502
     assert "remoteIp" not in result["http_request"]
+
+# ---------- recent changes ----------
+
+def audit_entry(env, image="europe-west1-docker.pkg.dev/p/r/demo-shop@sha256:abc"):
+    return {
+        "timestamp": "2026-01-01T11:41:00+00:00",
+        "log_name": "projects/demo/logs/cloudaudit.googleapis.com%2Factivity",
+        "insert_id": "audit1",
+        "resource_labels": {"service_name": "demo-shop"},
+        "message": {
+            "serviceName": "run.googleapis.com",
+            "methodName": "google.cloud.run.v1.Services.ReplaceService",
+            "request": {"spec": {"template": {"spec": {"containers": [{"image": image, "env": env}]}}}},
+        },
+    }
+
+
+def test_find_values_digs_into_nested_dicts_and_lists():
+    data = {"a": {"env": 1}, "b": [{"env": 2}, {"c": {"env": 3}}]}
+    assert list(find_values(data, "env")) == [1, 2, 3]
+
+
+def test_summarize_change_extracts_image_and_env():
+    result = summarize_change(audit_entry([{"name": "PAYMENT_TIMEOUT_MS", "value": "150"}]))
+
+    assert result["env"] == {"PAYMENT_TIMEOUT_MS": "150"}
+    assert result["images"] == ["europe-west1-docker.pkg.dev/p/r/demo-shop@sha256:abc"]
+    assert result["insert_id"] == "audit1"
+
+
+def test_summarize_change_masks_secrets():
+    result = summarize_change(audit_entry([{"name": "STRIPE_API_KEY", "value": "sk_live_123"}]))
+
+    assert result["env"] == {"STRIPE_API_KEY": "***"}
+
+
+def test_is_run_change_ignores_other_services():
+    entry = audit_entry([])
+    entry["message"]["serviceName"] = "cloudbuild.googleapis.com"
+
+    assert not is_run_change(entry)

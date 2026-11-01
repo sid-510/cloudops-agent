@@ -13,6 +13,9 @@ MAX_MINUTES = 10080 # 7 days
 MAX_RESULTS = 100
 MAX_TOP_N = 50      # most distinct messages top_errors will return
 MAX_SCAN = 1000     # most raw entries top_errors will fetch and count
+HTTP_FIELDS = ("requestMethod", "requestUrl", "status", "latency")
+AUDIT_ACTIVITY_LOG = "cloudaudit.googleapis.com%2Factivity"
+SENSITIVE_WORDS = ("KEY", "SECRET", "TOKEN", "PASSWORD")
 
 def clamp(value: int, low: int, high: int) -> int:
     """Returen value limited to the range [low, high]."""
@@ -23,7 +26,6 @@ def build_error_filter(minutes: int, now: datetime) -> str:
     since = now - timedelta(minutes=minutes)
     return f'severity>=ERROR AND timestamp>="{since.isoformat()}"'
 
-HTTP_FIELDS = ("requestMethod", "requestUrl", "status", "latency")
 
 
 def summarize_http_request(http_request) -> dict | None:
@@ -99,3 +101,49 @@ def summarize_errors(entries: list[dict], top_n: int) -> list[dict]:
             }
         )
     return summary
+
+def find_values(obj: Any, key: str):
+    """Yield every value stored under `key`, however deeply nested in dicts and lists."""
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if k == key:
+                yield v
+            yield from find_values(v, key)
+    elif isinstance(obj, list):
+        for item in obj:
+            yield from find_values(item, key)
+
+
+def mask_if_sensitive(name: str, value: Any) -> Any:
+    """Hide the values of settings that look like secrets."""
+    return "***" if any(word in name.upper() for word in SENSITIVE_WORDS) else value
+
+
+def is_run_change(entry: dict) -> bool:
+    """True for audit-log entries recording a change to a Cloud Run service."""
+    message = entry["message"]
+    return (
+        AUDIT_ACTIVITY_LOG in entry["log_name"]
+        and isinstance(message, dict)
+        and message.get("serviceName") == "run.googleapis.com"
+    )
+
+
+def summarize_change(entry: dict) -> dict:
+    """Summarise one Cloud Run change: when, which image, which settings."""
+    message = entry["message"]
+    env = {}
+    for env_list in find_values(message, "env"):
+        if isinstance(env_list, list):
+            for var in env_list:
+                if isinstance(var, dict) and var.get("name"):
+                    env[var["name"]] = mask_if_sensitive(var["name"], var.get("value"))
+
+    return {
+        "timestamp": entry["timestamp"],
+        "insert_id": entry["insert_id"],
+        "method": message.get("methodName"),
+        "service": entry["resource_labels"].get("service_name"),
+        "images": sorted({str(i) for i in find_values(message, "image")}),
+        "env": env,
+    }

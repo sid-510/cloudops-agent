@@ -12,6 +12,8 @@ from cloudops_agent.mcp_servers.logging_helpers import (
     clamp,
     clean_search_text,
     summarize_errors,
+    is_run_change,
+    summarize_change,
 )
 
 SEVERITY_RANK = {
@@ -67,3 +69,9 @@ def replay_top_errors(entries, now, minutes=60, top_n=10) -> dict:
         "truncated": len(errors) == MAX_SCAN,
         "top_errors": summarize_errors(errors, top_n),
     }
+
+def replay_get_recent_changes(entries, now, minutes=120, max_results=20) -> list[dict]:
+    minutes = clamp(minutes, 1, MAX_MINUTES)
+    max_results = clamp(max_results, 1, MAX_RESULTS)
+    changes = [summarize_change(e) for e in in_window(entries, minutes, now) if is_run_change(e)]
+    return changes[:max_results]
