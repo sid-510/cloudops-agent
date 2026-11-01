@@ -1,0 +1,110 @@
+{
+  "run": {
+    "model": "gemini-3.7-flash",
+    "diagnosis": {
+      "root_cause_category": "bad_config_deploy",
+      "root_cause": "Configuration change in revision demo-shop-00005-s2f set PAYMENT_TIMEOUT_MS to 150ms, which is too short for payment provider responses (averaging ~151ms), causing checkout operations to time out and fail with 502 Bad Gateway.",
+      "affected_revision": "demo-shop-00005-s2f",
+      "evidence_insert_ids": [
+        "7iykbbe15lau",
+        "6ae0c792000d705b4f36ec61",
+        "6ae0c792000d7723dec693f1",
+        "6ae0c79200066735570e08b0"
+      ],
+      "confidence": "high"
+    },
+    "tool_calls": [
+      {
+        "name": "top_errors",
+        "args": {
+          "minutes": 180
+        }
+      },
+      {
+        "name": "get_recent_changes",
+        "args": {
+          "minutes": 180
+        }
+      },
+      {
+        "name": "search_logs_by_text",
+        "args": {
+          "text": "Payment",
+          "minutes": 60
+        }
+      },
+      {
+        "name": "search_logs_by_text",
+        "args": {
+          "minutes": 60,
+          "text": "checkout"
+        }
+      }
+    ],
+    "returned_insert_ids": [
+      "-9xnvamdnm9e",
+      "11rknk4dbnbt",
+      "1n5j0zydctqm",
+      "1yjvd2dte46",
+      "6ae0c78c000e317d4296efd4",
+      "6ae0c78d0002bda32d14c02e",
+      "6ae0c78d0006b3e686a8ec17",
+      "6ae0c78d000a72ef1f85d840",
+      "6ae0c78e0005b0a58ce000d9",
+      "6ae0c78e00098ccbe863f750",
+      "6ae0c78e000d615753a69b14",
+      "6ae0c78f00020e13cf00f126",
+      "6ae0c78f0005fb2dbcf584a0",
+      "6ae0c78f000d2c4e058c9096",
+      "6ae0c7900001c9a98ad0562e",
+      "6ae0c7900005beb46bb75643",
+      "6ae0c7900009a589def27c21",
+      "6ae0c79100020287c66fb27f",
+      "6ae0c7910005ecb970346258",
+      "6ae0c7910005ef7266383740",
+      "6ae0c7910009cc992c04d906",
+      "6ae0c7910009cf7c861127c8",
+      "6ae0c7910009d330cf4c525f",
+      "6ae0c791000dd9a79ce2517d",
+      "6ae0c791000ddbc1ce742aef",
+      "6ae0c791000de0de36f281b7",
+      "6ae0c7920002717160858d13",
+      "6ae0c792000278f2992aa4bf",
+      "6ae0c79200027b51e70eec25",
+      "6ae0c79200066735570e08b0",
+      "6ae0c79200066b70329b3207",
+      "6ae0c79200066d32e1b10e4b",
+      "6ae0c79200099a43fe517104",
+      "6ae0c79200099ed4eef0608e",
+      "6ae0c7920009a26723bbffcf",
+      "6ae0c792000d705b4f36ec61",
+      "6ae0c792000d72ec592456b5",
+      "6ae0c792000d7723dec693f1",
+      "6ae0c7930001f8bfea40aeeb",
+      "6ae0c7930001fbd7dddef728",
+      "6ae0c7930001fedd0de33edc",
+      "6ae0c793000548058c485c4c",
+      "6ae0c79300054ce1efb8b429",
+      "6ae0c793000552489510ca86",
+      "7iykbbe15lau",
+      "alfppydl9iw",
+      "h7nkijd9uca",
+      "h8ahxtdr5x8",
+      "s30bqddzkqa",
+      "sbz39edixjm",
+      "xvn3mfd8opd"
+    ],
+    "total_tokens": 25450,
+    "seconds": 14.6
+  },
+  "score": {
+    "incident": "inc-001",
+    "outcome": "correct",
+    "score": 1.0,
+    "revision_correct": true,
+    "invented_ids": [],
+    "tool_calls": 4,
+    "total_tokens": 25450,
+    "seconds": 14.6
+  }
+}
