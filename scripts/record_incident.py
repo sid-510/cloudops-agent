@@ -6,21 +6,23 @@ Usage: uv run python scripts/record_incident.py incidents/inc-001
 import json
 import os
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-import time
 
 from google.api_core.exceptions import ResourceExhausted
-
 from google.cloud import logging as cloud_logging
 
 from cloudops_agent.mcp_servers.logging_helpers import entry_to_dict
 
 MARGIN = timedelta(minutes=30)  # extra context before and after the incident
 MAX_ENTRIES = 5000
-
 PAGE_SIZE = 1000  # fewer, larger pages = fewer API requests
 RETRIES = 3
+
+# Requests to the shop's hidden fault switch would give the answer away, and do not
+# exist in a real incident, so they are removed from snapshots (and counted).
+CHAOS_PATH = "/admin/chaos"
 
 
 def fetch_entries(client, log_filter: str) -> list[dict]:
@@ -42,6 +44,11 @@ def fetch_entries(client, log_filter: str) -> list[dict]:
             print(f"rate limited, waiting 60s (attempt {attempt}/{RETRIES})")
             time.sleep(60)
 
+
+def mentions_chaos(entry: dict) -> bool:
+    return CHAOS_PATH in json.dumps(entry, default=str)
+
+
 def main() -> None:
     incident_dir = Path(sys.argv[1])
     label = json.loads((incident_dir / "label.json").read_text())
@@ -58,11 +65,13 @@ def main() -> None:
 
     client = cloud_logging.Client(project=os.environ["GOOGLE_CLOUD_PROJECT"])
     try:
-        entries = fetch_entries(client, log_filter)
+        fetched = fetch_entries(client, log_filter)
+        entries = [e for e in fetched if not mentions_chaos(e)]
         snapshot.update(
             status="ok",
             entry_count=len(entries),
-            truncated=len(entries) == MAX_ENTRIES,
+            truncated=len(fetched) == MAX_ENTRIES,
+            removed_chaos_entries=len(fetched) - len(entries),
             entries=entries,
         )
     except Exception as exc:
@@ -71,7 +80,9 @@ def main() -> None:
     out = incident_dir / "logs.json"
     out.write_text(json.dumps(snapshot, indent=2, default=str))
     print(f"{snapshot['status']}: {len(snapshot['entries'])} entries -> {out}")
-    if snapshot["status"] == "query_failed":
+    if snapshot["status"] == "ok":
+        print(f"removed {snapshot['removed_chaos_entries']} /admin/chaos entries")
+    else:
         print(f"error: {snapshot['error']}")
 
 
