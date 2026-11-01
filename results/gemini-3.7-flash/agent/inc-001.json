@@ -3,13 +3,12 @@
     "model": "gemini-3.7-flash",
     "diagnosis": {
       "root_cause_category": "bad_config_deploy",
-      "root_cause": "Configuration change in revision demo-shop-00005-s2f set PAYMENT_TIMEOUT_MS to 150ms, which is too short for payment provider responses (averaging ~151ms), causing checkout operations to time out and fail with 502 Bad Gateway.",
+      "root_cause": "A configuration change deployed revision demo-shop-00005-s2f with PAYMENT_TIMEOUT_MS set to 150ms, which is too aggressive and causes payment provider requests taking ~150-151ms to time out with 502 Bad Gateway errors.",
       "affected_revision": "demo-shop-00005-s2f",
       "evidence_insert_ids": [
         "7iykbbe15lau",
         "6ae0c792000d705b4f36ec61",
-        "6ae0c792000d7723dec693f1",
-        "6ae0c79200066735570e08b0"
+        "6ae0c792000d7723dec693f1"
       ],
       "confidence": "high"
     },
@@ -17,6 +16,7 @@
       {
         "name": "top_errors",
         "args": {
+          "top_n": 10,
           "minutes": 180
         }
       },
@@ -29,15 +29,15 @@
       {
         "name": "search_logs_by_text",
         "args": {
-          "text": "Payment",
-          "minutes": 60
+          "minutes": 30,
+          "text": "Payment"
         }
       },
       {
         "name": "search_logs_by_text",
         "args": {
-          "minutes": 60,
-          "text": "checkout"
+          "text": "checkout",
+          "minutes": 30
         }
       }
     ],
@@ -94,7 +94,7 @@
       "sbz39edixjm",
       "xvn3mfd8opd"
     ],
-    "total_tokens": 25450,
+    "total_tokens": 25120,
     "seconds": 14.6
   },
   "score": {
@@ -104,7 +104,7 @@
     "revision_correct": true,
     "invented_ids": [],
     "tool_calls": 4,
-    "total_tokens": 25450,
+    "total_tokens": 25120,
     "seconds": 14.6
   }
 }
